@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\Comment;
 use App\Entity\Question;
+use App\Form\CommentType;
 use App\Form\QuestionType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,7 +30,7 @@ class QuestionController extends AbstractController
 
             $em->persist($question);
             $em->flush();
-            $this->addFlash('succes', 'Votre question a été ajoutée !');
+            $this->addFlash('success', 'Votre question a été ajoutée !');
             return $this->redirectToRoute('home');
         }
         return $this->render('question/index.html.twig', [
@@ -38,8 +40,29 @@ class QuestionController extends AbstractController
 
 
     #[Route('/question/{id}', name: 'question_show')]
-    public function show(Request $request, Question $question) : Response {
+    public function show(Request $request, Question $question, EntityManagerInterface $em) : Response {
         
-        return $this->render('question/show.html.twig', ['question' => $question]);
+        $comment = new Comment();
+        $commentForm = $this->createForm(CommentType::class, $comment);
+        $commentForm->handleRequest($request);
+
+        if($commentForm->isSubmitted() && $commentForm->isValid()) {
+            $comment->setCreatedAt(new \DateTimeImmutable())
+                    ->setRating(0)
+                    ->setQuestion($question);
+                
+            $em->persist($comment);
+            $em->flush();
+
+            $this->addFlash('success', 'Votre réponse a été publiée.');
+            return $this->redirect($request->getUri());
+        }
+
+        return $this->render('question/show.html.twig', [
+            'question' => $question, 
+            'form' => $commentForm->createView()
+            // 'nbComments' => count($question->getComments()),
+            // 'comments' => $question->getComments()
+        ]);
     }
 }
