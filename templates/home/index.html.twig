@@ -2,17 +2,18 @@
 
 {% block title %}Quora{% endblock %}
 
+{#  #}
+
 {% block body %}
     <ul>
         {% for question in questions %}
-            <a href="{{ path('question_show', {id: question.id}) }}" class="block block-shadow d-flex flex-row mb-20">
-                {% include "partials/_rating.html.twig" with {rating: question.rating} %}
+            <div class="block d-flex flex-row mb-20">
+                {% include "partials/_rating.html.twig" with {rating: question.rating, from: 'question', id: question.id} %}
                 <div class="flex-fill d-flex flex-column">
-                    <div class="mb-20 pb-20 question-content">
-                        <h3 class="mb-20">{{ question.title }}</h3>
-                        <p>{{ question.content }}</p>
-                    </div>
-
+                    <a class="mb-20 question-content pb-20" href="{{ path('question_show', {id: question.id})}}">
+                        <h3 class="mb-20">{{question.title}}</h3>
+                        <p class="question-text">{{question.content}}</p>
+                    </a>
                     <div class="d-flex flex-row justify-content-between">
                         <div class="d-flex flex-row align-items-center">
                             <img src="https://randomuser.me/api/portraits/men/{{random(0,100)}}.jpg" alt="profile picture" class="avatar mr-20">
@@ -20,12 +21,11 @@
                         </div>
                         <div class="d-flex flex-row align-items-center">
                             <i class="fas fa-comment mr-20"></i>
-                            <p>{{ question.nbResponse }}</p>
+                            <p>{{question.nbResponse}}</p>
                         </div>
                     </div>
-
                 </div>
-            </a>
+            </div>
         {% endfor %}
     </ul>
 {% endblock %}
