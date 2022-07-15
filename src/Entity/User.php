@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
@@ -18,18 +19,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private $id;
 
     #[ORM\Column(type: 'string', length: 180, unique: true)]
+    #[Assert\Email(message: "Veuillez renseigner une adresse mail valide.")]
+    #[Assert\NotBlank(message: "Veuillez renseigner ce champs.")]
     private $email;
 
     #[ORM\Column(type: 'json')]
     private $roles = [];
 
     #[ORM\Column(type: 'string')]
+    #[Assert\Length(min: 6, minMessage: "Le mot de passe doit faire au minimum 6 carractères.")]
+    #[Assert\NotBlank(message: "Veuillez entrer un mot de passe")]
     private $password;
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Assert\NotBlank(message: "Veuillez entrer votre prénom.")]
     private $firstname;
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Assert\NotBlank(message: "Veuillez entrer votre nom.")]
     private $lastname;
 
     #[ORM\OneToMany(mappedBy: 'author', targetEntity: Question::class, orphanRemoval: true)]
@@ -39,6 +46,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private $Comments;
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Assert\Url(message: "Votre image doit provenir d'une URL.")]
+    #[Assert\NotBlank(message: "Veuillez renseigner une image.")]
     private $picture;
 
     public function __construct()
