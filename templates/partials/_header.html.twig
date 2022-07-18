@@ -10,7 +10,9 @@
 
         {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
             <div class="d-flex flex-row-no-wrap align-items-center">
+                <a href="{{ path('current_user')}}">
                 <img class="avatar avatar-lg mr-10" src="{{app.user.picture}}" alt="Profile picture">
+                </a>
                 <small>
                     <a href="{{ path('logout') }}">Déconnexion</a>
                 </small>
