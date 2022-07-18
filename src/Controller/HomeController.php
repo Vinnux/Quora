@@ -12,7 +12,7 @@ class HomeController extends AbstractController
     #[Route('/', name: 'home')]
     public function index(QuestionRepository $questionRepository): Response
     {
-        $questions = $questionRepository->findAll();
+        $questions = $questionRepository->findBy([], ['createdAt' => 'DESC']);
         // $questions = [
         //     [
         //         'id' => 1,
