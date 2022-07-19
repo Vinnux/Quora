@@ -138,6 +138,10 @@ small {
     margin-right: 50px;
 }
 
+.mb-10 {
+    margin-bottom: 10px;
+}
+
 .mb-20 {
     margin-bottom: 20px;
 }
@@ -359,6 +363,12 @@ header {
 
 .rating-down {
     color: var(--warning);
+}
+
+/* PROFILE */
+.profile-picture {
+    width: 150px;
+    border-radius: var(--border-radius);
 }
 
 /* FOOTER */
