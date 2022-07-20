@@ -78,16 +78,11 @@ class QuestionController extends AbstractController
                 $this->addFlash('success', 'Votre réponse a été publiée.');
                 return $this->redirect($request->getUri());
             }
-            $option['form'] = $commentForm->createView();
+            $options['form'] = $commentForm->createView();
         }
         
 
-        return $this->render('question/show.html.twig', [
-            'question' => $question, 
-            'form' => $commentForm->createView()
-            // 'nbComments' => count($question->getComments()),
-            // 'comments' => $question->getComments()
-        ]);
+        return $this->render('question/show.html.twig', $options);
     }
 
     #[Route('/question/rating/{id}/{score}', name: 'question_rating')]

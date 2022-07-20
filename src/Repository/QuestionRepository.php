@@ -54,9 +54,9 @@ class QuestionRepository extends ServiceEntityRepository
                     ->setParameter('id', $id)
                     ->join('q.author', 'a')
                     ->addSelect('a')
-                    ->join('q.comments', 'c')
+                    ->leftJoin('q.comments', 'c')
                     ->addSelect('c')
-                    ->join('c.author','ca')
+                    ->leftJoin('c.author','ca')
                     ->addSelect('ca')
                     ->getQuery()
                     ->getOneOrNullResult();
