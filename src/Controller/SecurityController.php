@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Form\UserType;
 use App\Repository\ResetPasswordRepository;
 use App\Repository\UserRepository;
+use App\Service\UploaderPicture;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,6 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
@@ -32,7 +34,7 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/signup', name: 'signup')]
-    public function signup(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $passwordHasher, UserAuthenticatorInterface $userAuthenticator, MailerInterface $mailer): Response
+    public function signup(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $passwordHasher, UserAuthenticatorInterface $userAuthenticator, MailerInterface $mailer, UploaderPicture $uploaderPicture): Response
     {
         $user = new User();
         $userForm = $this->createForm(UserType::class, $user);
@@ -41,6 +43,13 @@ class SecurityController extends AbstractController
         if($userForm->isSubmitted() && $userForm->isValid()) {
             $hash = $passwordHasher->hashPassword($user, $user->getPassword());
             $user->setPassword($hash);
+
+            //télécharger l'image de profil upload par user
+            $picture = $userForm->get('pictureFile')->getData();
+            //lancer le service
+
+            //appliquer la photo à l'utilisateur
+            $user->setPicture($uploaderPicture->uploadProfileImage($picture));
 
             $em->persist($user);
             $em->flush();
@@ -87,8 +96,11 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/reset-password-request', name: 'reset-password-request')]
-    public function resetPasswordRequest(Request $request, UserRepository $userRepo, ResetPasswordRepository $resetPassowordRepo, EntityManagerInterface $em, MailerInterface $mailer)
+    public function resetPasswordRequest(Request $request, UserRepository $userRepo, ResetPasswordRepository $resetPassowordRepo, EntityManagerInterface $em, MailerInterface $mailer, RateLimiterFactory $passwordRecoveryLimiter)
     {
+
+        $limiter = $passwordRecoveryLimiter->create($request->getClientIp());
+        
         $emailResetRequestForm = $this->createFormBuilder()
                                     ->add('email', EmailType::class, [
                                         'constraints' => [
@@ -104,6 +116,13 @@ class SecurityController extends AbstractController
 
         $emailResetRequestForm->handleRequest($request);
         if($emailResetRequestForm->isSubmitted() && $emailResetRequestForm->isValid()) {
+
+            //limiter : s'il consome 4 tentatives de reinitialiser le mdp on bloque
+            if(!$limiter->consume(1)->isAccepted()) {
+                $this->addFlash('error', 'Vous devez attendre 1 heure pour refaire une demande');
+                return $this->redirectToRoute('login');
+            }
+            
             $emailUser = $emailResetRequestForm->get('email')->getData();
             $user = $userRepo->findOneBy(['email' => $emailUser]);
 
@@ -122,7 +141,7 @@ class SecurityController extends AbstractController
                 $resetPassoword = new ResetPassword();
                 $resetPassoword->setUser($user)
                                 ->setExiredAt(new \DateTimeImmutable('+2 hours'))
-                                ->setToken($token);
+                                ->setToken(sha1($token));
         
                 $em->persist($resetPassoword);
                 $em->flush();
@@ -152,13 +171,20 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/reset-password/{token}', name: 'reset-password')]
-    public function resetPassword(string $token, ResetPasswordRepository $resetPassowordRepo, EntityManagerInterface $em, UserPasswordHasherInterface $passwordHasher, Request $request) 
+    public function resetPassword(string $token, ResetPasswordRepository $resetPasswordRepo, EntityManagerInterface $em, UserPasswordHasherInterface $passwordHasher, Request $request, RateLimiterFactory $passwordRecoveryLimiter) 
     {
-        $resetPassoword = $resetPassowordRepo->findOneBy(['token' => $token]);
+        //limiter : s'il consome 4 tentatives de token url on bloque
+        $limiter = $passwordRecoveryLimiter->create($request->getClientIp());
+        if(!$limiter->consume(1)->isAccepted()) {
+            $this->addFlash('error', 'Vous devez attendre 1 heure pour refaire une demande');
+            return $this->redirectToRoute('login');
+        }
 
-            if(!$resetPassoword || $resetPassoword->getExiredAt() < new \DateTime('now')) {
-                if($resetPassoword) {
-                    $resetPassowordRepo->remove($resetPassoword, true);
+        $resetPassword = $resetPasswordRepo->findOneBy(['token' => sha1($token)]);
+
+            if(!$resetPassword || $resetPassword->getExiredAt() < new \DateTime('now')) {
+                if($resetPassword) {
+                    $resetPasswordRepo->remove($resetPassword, true);
                 }
                 $this->addFlash('error', 'Votre demande n\'existe pas ou a exipré');
                 return $this->redirectToRoute('login');
@@ -181,15 +207,15 @@ class SecurityController extends AbstractController
 
 
         $passwordResetForm->handleRequest($request);
-        
+
             if($passwordResetForm->isSubmitted() && $passwordResetForm->isValid()) {
                 $newPassword = $passwordResetForm->get('password')->getData();
-                $user = $resetPassoword->getUser();
+                $user = $resetPassword->getUser();
 
                 $hash = $passwordHasher->hashPassword($user, $newPassword);
                 $user->setPassword($hash);
 
-                $em->remove($resetPassoword);
+                $em->remove($resetPassword);
                 $em->flush();
 
                 $this->addFlash('success', 'Votre mot de passe a bien été modifié !');

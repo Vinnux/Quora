@@ -15,7 +15,7 @@
             {% include "partials/_rating.html.twig" with {rating: question.rating, from: 'question', id: question.id} %}
             <h3 class="mr-10">{{ question.title }}</h3>
             <div class="question-tag">QUESTION</div>
-            <img src="{{ question.author.picture }}" alt="" class="avatar ml-auto">
+            <img src="{{ asset(question.author.picture) }}" alt="" class="avatar ml-auto">
         </div>
         <p class="question-text">{{ question.content }}</p>
         
